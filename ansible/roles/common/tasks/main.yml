@@ -1,0 +1,77 @@
+---
+# Common Host Baseline and Hardening Role
+- name: Update apt cache and upgrade base packages
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+    upgrade: dist
+  when: ansible_os_family == "Debian"
+
+- name: Install foundational system and security utilities
+  ansible.builtin.package:
+    name:
+      - curl
+      - git
+      - ufw
+      - fail2ban
+      - chrony
+      - htop
+      - jq
+      - ca-certificates
+    state: present
+
+- name: Set system timezone
+  community.general.timezone:
+    name: "{{ env_timezone | default('Europe/Paris') }}"
+
+- name: Configure Chrony NTP service
+  ansible.builtin.template:
+    src: chrony.conf.j2
+    dest: /etc/chrony/chrony.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart chrony
+  ignore_errors: true
+
+- name: Deploy hardened SSH daemon configuration
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/99-ansible-hardened.conf
+    content: |
+      Port {{ sshd_port | default(2222) }}
+      PermitRootLogin {{ sshd_permit_root_login | default('no') }}
+      PasswordAuthentication {{ sshd_password_authentication | default('no') }}
+      X11Forwarding {{ sshd_x11_forwarding | default('no') }}
+      MaxAuthTries {{ sshd_max_auth_tries | default(3) }}
+      Ciphers {{ sshd_ciphers | default('chacha20-poly1305@openssh.com,aes256-gcm@openssh.com') }}
+      MACs {{ sshd_macs | default('hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com') }}
+    owner: root
+    group: root
+    mode: "0600"
+    validate: "/usr/sbin/sshd -t -f %s"
+  notify: Restart sshd
+  ignore_errors: true
+
+- name: Configure UFW firewall default deny incoming
+  community.general.ufw:
+    state: enabled
+    direction: incoming
+    policy: deny
+
+- name: Configure UFW firewall default allow outgoing
+  community.general.ufw:
+    direction: outgoing
+    policy: allow
+
+- name: Allow designated TCP ports through UFW
+  community.general.ufw:
+    rule: allow
+    port: "{{ item | string }}"
+    proto: tcp
+  loop: "{{ firewall_allowed_tcp_ports }}"
+
+- name: Ensure Fail2ban service is active and enabled
+  ansible.builtin.systemd:
+    name: fail2ban
+    state: started
+    enabled: true

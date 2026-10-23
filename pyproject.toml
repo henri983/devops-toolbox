@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "devops-toolbox"
+version = "1.0.0"
+description = "Production-ready DevOps automation toolbox, Ansible playbooks, and AI SysAdmin Copilot"
+authors = [{ name = "henri983", email = "henrinyame2001@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6.0.1",
+    "pydantic>=2.5.0",
+    "rich>=13.7.0",
+    "click>=8.1.7"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.2.0",
+    "bandit>=1.7.7"
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --strict-markers"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B", "I"]
+ignore = ["E501"]

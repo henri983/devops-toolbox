@@ -1,0 +1,32 @@
+---
+# Global Configuration Variables for Infrastructure
+env_timezone: "Europe/Paris"
+ntp_servers:
+  - "0.europe.pool.ntp.org"
+  - "1.europe.pool.ntp.org"
+
+# SSH Hardening Policies (ANSSI / CIS Benchmark Level 1)
+sshd_port: 2222
+sshd_permit_root_login: "no"
+sshd_password_authentication: "no"
+sshd_x11_forwarding: "no"
+sshd_max_auth_tries: 3
+sshd_ciphers: "chacha20-poly1305@openssh.com,aes256-gcm@openssh.com"
+sshd_macs: "hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com"
+
+# Firewall (UFW) Allowed Ports
+firewall_allowed_tcp_ports:
+  - 2222  # Hardened SSH
+  - 80    # HTTP (Let's Encrypt challenge)
+  - 443   # HTTPS TLS 1.3
+
+# Docker Host Tuning
+docker_log_max_size: "50m"
+docker_log_max_file: "3"
+docker_storage_driver: "overlay2"
+
+# Observability Agents
+node_exporter_version: "1.7.0"
+node_exporter_port: 9100
+promtail_version: "2.9.2"
+promtail_port: 9080

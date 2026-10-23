@@ -1,0 +1,16 @@
+---
+# Master Infrastructure Deployment Playbook
+- name: Apply Base Security & Hardening on All Managed Nodes
+  hosts: all
+  become: true
+  roles:
+    - common
+    - monitoring_agent
+
+- name: Provision Application & Staging Docker Containers
+  hosts:
+    - production
+    - staging
+  become: true
+  roles:
+    - docker_host

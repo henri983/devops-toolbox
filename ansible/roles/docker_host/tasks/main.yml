@@ -1,0 +1,45 @@
+---
+# Docker Host Provisioning and Security Hardening
+- name: Install prerequisite packages for Docker repository
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+    state: present
+
+- name: Create directory for Docker APT keyring
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Configure hardened Docker daemon configuration
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "json-file",
+        "log-opts": {
+          "max-size": "{{ docker_log_max_size | default('50m') }}",
+          "max-file": "{{ docker_log_max_file | default('3') }}"
+        },
+        "storage-driver": "{{ docker_storage_driver | default('overlay2') }}",
+        "no-new-privileges": true,
+        "live-restore": true,
+        "userland-proxy": false
+      }
+    owner: root
+    group: root
+    mode: "0640"
+  notify: Restart docker
+  ignore_errors: true
+
+- name: Ensure Docker service is enabled and started
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: true
+  ignore_errors: true

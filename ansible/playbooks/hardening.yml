@@ -1,0 +1,45 @@
+---
+# Dedicated OS & Network Security Hardening Playbook
+# Follows CIS Benchmark and ANSSI Recommendations
+- name: Execute Security Baseline and Policy Enforcement
+  hosts: all
+  become: true
+  tasks:
+    - name: Ensure kernel sysctl security parameters are enforced
+      ansible.posix.sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: true
+      loop:
+        - { key: 'net.ipv4.ip_forward', value: '0' }
+        - { key: 'net.ipv4.conf.all.send_redirects', value: '0' }
+        - { key: 'net.ipv4.conf.all.accept_source_route', value: '0' }
+        - { key: 'net.ipv4.conf.all.accept_redirects', value: '0' }
+        - { key: 'net.ipv4.tcp_syncookies', value: '1' }
+        - { key: 'fs.suid_dumpable', value: '0' }
+
+    - name: Disable legacy unneeded filesystems
+      ansible.builtin.copy:
+        dest: /etc/modprobe.d/devops-toolbox-disable-fs.conf
+        content: |
+          install cramfs /bin/true
+          install freevxfs /bin/true
+          install jffs2 /bin/true
+          install hfs /bin/true
+          install hfsplus /bin/true
+          install squashfs /bin/true
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Enforce restrictive permissions on critical system files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        owner: root
+        group: root
+        mode: "0600"
+      loop:
+        - /etc/crontab
+        - /etc/ssh/sshd_config
+      ignore_errors: true

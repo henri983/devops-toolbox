@@ -1,0 +1,51 @@
+---
+# Observability Agent (Prometheus Node Exporter) Role
+- name: Create dedicated system user for node_exporter
+  ansible.builtin.user:
+    name: node_exporter
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+- name: Create runtime directory for node_exporter textfile collector
+  ansible.builtin.file:
+    path: /var/lib/node_exporter/textfile_collector
+    state: directory
+    owner: node_exporter
+    group: node_exporter
+    mode: "0755"
+
+- name: Deploy systemd service unit for node_exporter
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/node_exporter.service
+    content: |
+      [Unit]
+      Description=Prometheus Node Exporter
+      Wants=network-online.target
+      After=network-online.target
+
+      [Service]
+      User=node_exporter
+      Group=node_exporter
+      Type=simple
+      ExecStart=/usr/local/bin/node_exporter \
+        --web.listen-address=0.0.0.0:{{ node_exporter_port | default(9100) }} \
+        --collector.textfile.directory=/var/lib/node_exporter/textfile_collector
+      Restart=on-failure
+      RestartSec=5s
+
+      [Install]
+      WantedBy=multi-user.target
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart node_exporter
+  ignore_errors: true
+
+- name: Ensure Node Exporter service is enabled and started
+  ansible.builtin.systemd:
+    name: node_exporter
+    state: started
+    enabled: true
+    daemon_reload: true
+  ignore_errors: true

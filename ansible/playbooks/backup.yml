@@ -1,0 +1,34 @@
+---
+# Automated Database and System Backup Orchestration Playbook
+- name: Orchestrate Backup Operations across Storage and Database Nodes
+  hosts: production
+  become: true
+  tasks:
+    - name: Create secure backup directory tree
+      ansible.builtin.file:
+        path: /var/backups/automation
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Execute automated database backup script
+      ansible.builtin.command:
+        cmd: /usr/local/bin/backup_postgres.sh
+      register: backup_result
+      changed_when: backup_result.rc == 0
+      failed_when: backup_result.rc != 0 and backup_result.rc != 2
+      ignore_errors: true
+
+    - name: Clean up backups older than retention policy (7 days)
+      ansible.builtin.find:
+        paths: /var/backups/automation
+        age: 7d
+        recurse: true
+      register: expired_backups
+
+    - name: Remove expired archive files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ expired_backups.files | default([]) }}"
